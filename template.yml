@@ -50,7 +50,7 @@ Conditions:
 Resources:
   ProcessMSKfunctionCSR:
     Type: AWS::Serverless::Function
-    DependsOn: MSKToS3LambdaPolicy
+    DependsOn: MSKToTimestreamLambdaPolicy
     Condition: CreateVPCResources
     Properties:
       CodeUri: ./target/MSKToTimestreamLambda-1.0-SNAPSHOT.jar
@@ -95,7 +95,7 @@ Resources:
 
   ProcessMSKfunctionGSR:
     Type: AWS::Serverless::Function
-    DependsOn: MSKToS3TimestreamLambdaPolicy
+    DependsOn: MSKToTimestreamLambdaPolicy
     Condition: NoVPCResources
     Properties:
       CodeUri: ./target/MSKToTimestreamLambda-1.0-SNAPSHOT.jar
@@ -124,10 +124,10 @@ Resources:
             Topics:
               - ExampleTopic
 
-  MSKToS3TimestreamLambdaPolicy:
+  MSKToTimestreamLambdaPolicy:
     Type: 'AWS::IAM::Policy'
     Properties:
-      PolicyName: MSKLambdaS3Timestream
+      PolicyName: MSKLambdaTimestream
       PolicyDocument:
         Version: 2012-10-17
         Statement:
