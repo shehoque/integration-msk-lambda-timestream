@@ -25,34 +25,32 @@ public class TimestreamSimpleIngest {
         this.tableName = tableName;
     }
 
-    public void writeRecords(List<ClickEvent> clickEvents) {
+    public void writeRecord(ClickEvent clickEvent) {
         Random random = new Random();
         // Specify repeated values for all records
         List<Record> records = new ArrayList<>();
-        List<Dimension> dimensions = null;
-        for(ClickEvent clickEvent : clickEvents){
-            final long time = System.currentTimeMillis();
-            dimensions = new ArrayList<>();
-            Dimension eventType = Dimension.builder().name("event-type").value(clickEvent.getEventType().toString()).build();
-            Dimension deviceType= Dimension.builder().name("device-type").value(clickEvent.getDevicetype().toString()).build();
-            dimensions.add(deviceType);
-            dimensions.add(eventType);
-            Record viewCount = Record.builder()
-                    .dimensions(dimensions)
-                    .measureValueType(MeasureValueType.BIGINT)
-                    .measureName("view_count")
-                    .measureValue(String.valueOf(random.nextInt(100)*0.9+10))
-                    .time(String.valueOf(clickEvent.getEventtimestamp())).build();
+        List<Dimension> dimensions = new ArrayList<>();
+        final long time = System.currentTimeMillis();
+        dimensions = new ArrayList<>();
+        Dimension eventType = Dimension.builder().name("event-type").value(clickEvent.getEventType().toString()).build();
+        Dimension deviceType= Dimension.builder().name("device-type").value(clickEvent.getDevicetype().toString()).build();
+        dimensions.add(deviceType);
+        dimensions.add(eventType);
+        Record viewCount = Record.builder()
+                .dimensions(dimensions)
+                .measureValueType(MeasureValueType.BIGINT)
+                .measureName("view_count")
+                .measureValue(String.valueOf(random.nextInt(100)))
+                .time(String.valueOf(clickEvent.getEventtimestamp())).build();
 
-            Record clickCount = Record.builder()
-                    .dimensions(dimensions)
-                    .measureValueType(MeasureValueType.BIGINT)
-                    .measureName("click_count")
-                    .measureValue(String.valueOf(random.nextInt(100)*0.9+10))
-                    .time(String.valueOf(clickEvent.getEventtimestamp())).build();
-            records.add(viewCount);
-            records.add(clickCount);
-        }
+        Record clickCount = Record.builder()
+                .dimensions(dimensions)
+                .measureValueType(MeasureValueType.BIGINT)
+                .measureName("click_count")
+                .measureValue(String.valueOf(random.nextInt(100)))
+                .time(String.valueOf(clickEvent.getEventtimestamp())).build();
+        records.add(viewCount);
+        records.add(clickCount);
 
 
         WriteRecordsRequest writeRecordsRequest = WriteRecordsRequest.builder()

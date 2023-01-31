@@ -69,7 +69,6 @@ class ProcessRecords {
         String databaseName = System.getenv("DatabaseName") != null?System.getenv("DatabaseName"):"anaplan-poc-db";
         String tableName = System.getenv("TableName") != null?System.getenv("TableName"):"clickstream-poc-tbl";
         TimestreamSimpleIngest timestreamSimpleIngest = new TimestreamSimpleIngest(timestreamWriteClient, databaseName, tableName);
-        List<ClickEvent> clickEvents = new ArrayList<>();
         kafkaEvent.getRecords().forEach((key, value) -> value.forEach(v -> {
 
             ClickEvent clickEvent = null;
@@ -92,10 +91,10 @@ class ProcessRecords {
             }
 
             if (clickEvent != null){
-                clickEvents.add(clickEvent);
+                timestreamSimpleIngest.writeRecord(clickEvent);
             }
         }));
-        timestreamSimpleIngest.writeRecords(clickEvents);
+
     }
 
     void processRecords(KafkaEvent kafkaEvent, String requestId) {
@@ -122,7 +121,7 @@ class ProcessRecords {
      *  - Set RequestTimeout to 20 seconds .
      *  - Set max connections to 5000 or higher.
      */
-    private static TimestreamWriteClient buildWriteClient() {
+    public static TimestreamWriteClient buildWriteClient() {
         ApacheHttpClient.Builder httpClientBuilder =
                 ApacheHttpClient.builder();
         httpClientBuilder.maxConnections(5000);
