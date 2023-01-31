@@ -1,0 +1,180 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: An AWS Lambda application that processes records read from Amazon MSK and syncs to Amazon S3.
+Parameters:
+  VPCStack:
+    Description: The name of the VPC stack
+    Type: String
+  BastionStack:
+    Description: The name of the Bastion/Kafka client instance stack
+    Type: String
+    Default: MSKClient
+  MSKStack:
+    Description: The name of the MSK stack
+    Type: String
+    Default: MSK
+  BatchSize:
+    Description: MSK Event Source Mapping - number of records retrieved per batch
+    Type: Number
+    MinValue: 1
+    MaxValue: 10000
+    Default: 1000
+  LambdaRetries:
+    Description: The number of times the lambda function will retry sending records to Firehose
+    Type: Number
+    MinValue: 1
+    MaxValue: 5
+    Default: 3
+  OtherSchemaRegistry:
+    Description: Are you only using a Schema Registry other than the AWS Glue Schema Registry
+    Type: String
+    Default: false
+    AllowedValues:
+      - true
+      - false
+  SecondaryDeserializer:
+    Description: Do you have records using a mix of the AWS Glue Schema Registry and another Schema Registry
+    Type: String
+    Default: false
+    AllowedValues:
+      - true
+      - false
+Conditions:
+  CreateVPCResources: !Or
+    - !Equals [ !Ref OtherSchemaRegistry, true ]
+    - !Equals [ !Ref SecondaryDeserializer, true ]
+  NoVPCResources: !And
+    - !Equals [ !Ref OtherSchemaRegistry, false ]
+    - !Equals [ !Ref SecondaryDeserializer, false ]
+
+Resources:
+  ProcessMSKfunctionCSR:
+    Type: AWS::Serverless::Function
+    DependsOn: MSKToS3LambdaPolicy
+    Condition: CreateVPCResources
+    Properties:
+      CodeUri: ./target/MSKToTimestreamLambda-1.0-SNAPSHOT.jar
+      Handler: com.amazonaws.kafka.samples.HandlerMSK
+      Runtime: java8
+      Description: Java function
+      MemorySize: 512
+      Timeout: 300
+      VpcConfig:
+        SecurityGroupIds:
+          - Fn::ImportValue:
+              !Sub "${BastionStack}-KafkaClientEC2InstanceSecurityGroupId"
+        SubnetIds:
+          - Fn::ImportValue:
+              !Sub "${VPCStack}-PrivateSubnetMSKOne"
+          - Fn::ImportValue:
+              !Sub "${VPCStack}-PrivateSubnetMSKTwo"
+          - Fn::ImportValue:
+              !Sub "${VPCStack}-PrivateSubnetMSKThree"
+      Environment:
+        Variables:
+          SCHEMA_REGISTRY_URL:
+            Fn::ImportValue:
+              !Sub "${BastionStack}-SchemaRegistryUrl"
+          DELIVERY_STREAM_NAME: !Ref deliverystream
+          RETRIES: !Ref LambdaRetries
+          CSR: !Ref OtherSchemaRegistry
+          SECONDARY_DESERIALIZER: !Ref SecondaryDeserializer
+      # Function's execution role
+      Role: !GetAtt LambdaRole.Arn
+      Events:
+        MSKEvent:
+          Type: MSK
+          Properties:
+            StartingPosition: TRIM_HORIZON
+            Stream:
+              Fn::ImportValue:
+                !Sub "${MSKStack}-MSKClusterArn"
+            BatchSize: !Ref BatchSize
+            Topics:
+              - ExampleTopic
+
+  ProcessMSKfunctionGSR:
+    Type: AWS::Serverless::Function
+    DependsOn: MSKToS3TimestreamLambdaPolicy
+    Condition: NoVPCResources
+    Properties:
+      CodeUri: ./target/MSKToTimestreamLambda-1.0-SNAPSHOT.jar
+      Handler: com.amazonaws.kafka.samples.HandlerMSK
+      Runtime: java8
+      Description: Java function
+      MemorySize: 512
+      Timeout: 300
+      Environment:
+        Variables:
+          DELIVERY_STREAM_NAME: !Ref deliverystream
+          RETRIES: !Ref LambdaRetries
+          CSR: !Ref OtherSchemaRegistry
+          SECONDARY_DESERIALIZER: !Ref SecondaryDeserializer
+      # Function's execution role
+      Role: !GetAtt LambdaRole.Arn
+      Events:
+        MSKEvent:
+          Type: MSK
+          Properties:
+            StartingPosition: TRIM_HORIZON
+            Stream:
+              Fn::ImportValue:
+                !Sub "${MSKStack}-MSKClusterArn"
+            BatchSize: !Ref BatchSize
+            Topics:
+              - ExampleTopic
+
+  MSKToS3TimestreamLambdaPolicy:
+    Type: 'AWS::IAM::Policy'
+    Properties:
+      PolicyName: MSKLambdaS3Timestream
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - ec2:CreateNetworkInterface
+              - ec2:DescribeNetworkInterfaces
+              - ec2:DescribeVpcs
+              - ec2:DeleteNetworkInterface
+              - ec2:DescribeSubnets
+              - ec2:DescribeSecurityGroups
+              - glue:GetSchemaVersion
+            Resource: '*'
+          - Effect: Allow
+            Action:
+              - timestream:*
+            Resource: '*'
+          - Effect: Allow
+            Action:
+              - firehose:PutRecordBatch
+            Resource: !GetAtt deliverystream.Arn
+          - Effect: Allow
+            Action:
+              - kafka:DescribeCluster
+              - kafka:GetBootstrapBrokers
+            Resource:
+              Fn::ImportValue:
+                !Sub "${MSKStack}-MSKClusterArn"
+      Roles:
+        - !Ref LambdaRole
+
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: ''
+            Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Path: "/"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+  s3bucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+
+
