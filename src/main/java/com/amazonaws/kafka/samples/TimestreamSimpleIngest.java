@@ -41,14 +41,14 @@ public class TimestreamSimpleIngest {
                     .dimensions(dimensions)
                     .measureValueType(MeasureValueType.BIGINT)
                     .measureName("view_count")
-                    .measureValue(String.valueOf(random.nextInt(100)*90+10))
+                    .measureValue(String.valueOf(random.nextInt(100)*0.9+10))
                     .time(String.valueOf(clickEvent.getEventtimestamp())).build();
 
             Record clickCount = Record.builder()
                     .dimensions(dimensions)
                     .measureValueType(MeasureValueType.BIGINT)
                     .measureName("click_count")
-                    .measureValue(String.valueOf(random.nextInt(100)*90+10))
+                    .measureValue(String.valueOf(random.nextInt(100)*0.9+10))
                     .time(String.valueOf(clickEvent.getEventtimestamp())).build();
             records.add(viewCount);
             records.add(clickCount);
