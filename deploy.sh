@@ -51,7 +51,7 @@ else
 fi
 
 #use appropriate command based on input parameters
-aws cloudformation deploy --template-file out.yml --stack-name MSKToS3 --s3-bucket $ARTIFACT_BUCKET --capabilities CAPABILITY_NAMED_IAM --parameter-overrides VPCStack=$VPC_STACK BastionStack=$KAFKA_CLIENT_STACK MSKStack=$MSK_STACK OtherSchemaRegistry=$CSR SecondaryDeserializer=$SECONDARY_DESERIALIZER
+aws cloudformation deploy --template-file out.yml --stack-name MSKToTimestream --s3-bucket $ARTIFACT_BUCKET --capabilities CAPABILITY_NAMED_IAM --parameter-overrides VPCStack=$VPC_STACK BastionStack=$KAFKA_CLIENT_STACK MSKStack=$MSK_STACK OtherSchemaRegistry=$CSR SecondaryDeserializer=$SECONDARY_DESERIALIZER
 #aws cloudformation deploy --template-file out.yml --stack-name MSKToS3 --s3-bucket $ARTIFACT_BUCKET --capabilities CAPABILITY_NAMED_IAM --parameter-overrides VPCStack=$VPC_STACK BastionStack=$KAFKA_CLIENT_STACK MSKStack=$MSK_STACK OtherSchemaRegistry=$CSR SecondaryDeserializer=$SECONDARY_DESERIALIZER BatchSize=$BATCH_SIZE
 #aws cloudformation deploy --template-file out.yml --stack-name MSKToS3 --s3-bucket $ARTIFACT_BUCKET --capabilities CAPABILITY_NAMED_IAM --parameter-overrides VPCStack=$VPC_STACK BastionStack=$KAFKA_CLIENT_STACK MSKStack=$MSK_STACK OtherSchemaRegistry=$CSR SecondaryDeserializer=$SECONDARY_DESERIALIZER LambdaRetries=$LAMBDA_RETRIES
 #aws cloudformation deploy --template-file out.yml --stack-name MSKToS3 --s3-bucket $ARTIFACT_BUCKET --capabilities CAPABILITY_NAMED_IAM --parameter-overrides VPCStack=$VPC_STACK BastionStack=$KAFKA_CLIENT_STACK MSKStack=$MSK_STACK OtherSchemaRegistry=$CSR SecondaryDeserializer=$SECONDARY_DESERIALIZER BatchSize=$BATCH_SIZE LambdaRetries=$LAMBDA_RETRIES
