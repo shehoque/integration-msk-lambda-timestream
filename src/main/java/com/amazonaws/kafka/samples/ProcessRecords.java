@@ -16,6 +16,7 @@ import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import samples.clickstream.avro.ClickEvent;
+import samples.workspaceevent.avro.WorkspaceEvent;
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.core.retry.RetryPolicy;
 import software.amazon.awssdk.http.apache.ApacheHttpClient;
@@ -67,11 +68,11 @@ class ProcessRecords {
 
     private void deserializeWriteToTimestream(Deserializer deserializer, KafkaEvent kafkaEvent, String requestId, TimestreamWriteClient timestreamWriteClient) {
         String databaseName = System.getenv("DatabaseName") != null?System.getenv("DatabaseName"):"anaplan-poc-db";
-        String tableName = System.getenv("TableName") != null?System.getenv("TableName"):"clickstream-poc-tbl";
+        String tableName = System.getenv("TableName") != null?System.getenv("TableName"):"workspace-tbl";
         TimestreamSimpleIngest timestreamSimpleIngest = new TimestreamSimpleIngest(timestreamWriteClient, databaseName, tableName);
         kafkaEvent.getRecords().forEach((key, value) -> value.forEach(v -> {
 
-            ClickEvent clickEvent = null;
+            WorkspaceEvent workspaceEvent = null;
             boolean csr = false;
 
             if (System.getenv("CSR") != null) {
@@ -79,7 +80,8 @@ class ProcessRecords {
                     csr = true;
                     try {
                         GenericRecord rec = (GenericRecord) deserializer.deserialize(v.getTopic(), base64Decode(v));
-                        clickEvent = (ClickEvent) SpecificData.get().deepCopy(ClickEvent.SCHEMA$, rec);
+                        workspaceEvent = (WorkspaceEvent) SpecificData.get().deepCopy(WorkspaceEvent.SCHEMA$, rec);
+
                     } catch (Exception e) {
                         logger.error(Util.stackTrace(e));
                     }
@@ -87,11 +89,12 @@ class ProcessRecords {
             }
 
             if (!csr) {
-                clickEvent = (ClickEvent) deserializer.deserialize(v.getTopic(), base64Decode(v));
+                workspaceEvent = (WorkspaceEvent) deserializer.deserialize(v.getTopic(), base64Decode(v));
             }
 
-            if (clickEvent != null){
-                timestreamSimpleIngest.writeRecord(clickEvent);
+            if (workspaceEvent != null){
+                logger.info("workspace event {}",workspaceEvent);
+                timestreamSimpleIngest.writeRecord(workspaceEvent);
             }
         }));
 
@@ -99,7 +102,6 @@ class ProcessRecords {
 
     void processRecords(KafkaEvent kafkaEvent, String requestId) {
         logger.info("Processing batch with {} records for Request ID {} \n", getKafkaEventRecordsSize(kafkaEvent), requestId);
-//        SendKinesisDataFirehose sendKinesisDataFirehose = new SendKinesisDataFirehose();
         Deserializer deserializer = null;
         if (System.getenv("CSR") != null) {
             if (Boolean.parseBoolean(System.getenv("CSR"))) {

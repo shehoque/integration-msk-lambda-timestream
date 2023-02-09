@@ -1,0 +1,13 @@
+{"namespace": "samples.workspaceevent.avro",
+  "type": "record",
+  "name": "WorkspaceEvent",
+  "fields": [
+    {"name": "workspaceId", "type": "string"},
+    {"name": "eventTimestamp",  "type": "long"},
+    {"name": "modelId",  "type": "string"},
+    {"name": "state",  "type": ["string", "null"]},
+    {"name": "version",  "type": ["string", "null"]},
+    {"name": "memUtil",  "type": "double"},
+    {"name": "cpuUtl",  "type": "double"}
+  ]
+}
